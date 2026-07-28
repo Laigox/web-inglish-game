@@ -29,21 +29,21 @@
       { prompt: "___ I speak too fast?", answer: "Do", options: ["Do", "Does"], explanation: "I usa Do.", translation: "¿Hablo demasiado rápido?" },
     ],
     frequency: [
-      { prompt: "___ she usually arrive on time?", answer: "Does", options: ["Do", "Does"], explanation: "Con she usamos Does.", translation: "¿Ella usualmente llega a tiempo?" },
-      { prompt: "___ they always study at night?", answer: "Do", options: ["Do", "Does"], explanation: "Con they usamos Do.", translation: "¿Ellos siempre estudian de noche?" },
-      { prompt: "___ he never eat fast food?", answer: "Does", options: ["Do", "Does"], explanation: "He usa Does.", translation: "¿Él nunca come comida rápida?" },
-      { prompt: "___ you often play video games?", answer: "Do", options: ["Do", "Does"], explanation: "You usa Do.", translation: "¿Tú juegas videojuegos a menudo?" },
-      { prompt: "___ we sometimes visit the park?", answer: "Do", options: ["Do", "Does"], explanation: "We usa Do.", translation: "¿A veces visitamos el parque?" },
-      { prompt: "___ it rarely rain here?", answer: "Does", options: ["Do", "Does"], explanation: "It usa Does.", translation: "¿Rara vez llueve aquí?" },
-      { prompt: "___ she usually drink tea?", answer: "Does", options: ["Do", "Does"], explanation: "She usa Does.", translation: "¿Ella usualmente toma té?" },
-      { prompt: "___ they frequently read books?", answer: "Do", options: ["Do", "Does"], explanation: "They usa Do.", translation: "¿Ellos leen libros con frecuencia?" },
-      { prompt: "___ he occasionally play football?", answer: "Does", options: ["Do", "Does"], explanation: "He usa Does.", translation: "¿Él ocasionalmente juega fútbol?" },
-      { prompt: "___ you seldom eat candy?", answer: "Do", options: ["Do", "Does"], explanation: "You usa Do.", translation: "¿Rara vez comes dulces?" },
-      { prompt: "___ we always start class at eight?", answer: "Do", options: ["Do", "Does"], explanation: "We usa Do.", translation: "¿Siempre empezamos clase a las ocho?" },
-      { prompt: "___ she often call her mom?", answer: "Does", options: ["Do", "Does"], explanation: "She usa Does.", translation: "¿Ella llama a su mamá a menudo?" },
-      { prompt: "___ they never arrive late?", answer: "Do", options: ["Do", "Does"], explanation: "They usa Do.", translation: "¿Ellos nunca llegan tarde?" },
-      { prompt: "___ it usually snow here?", answer: "Does", options: ["Do", "Does"], explanation: "It usa Does.", translation: "¿Usualmente nieva aquí?" },
-      { prompt: "___ I always forget my backpack?", answer: "Do", options: ["Do", "Does"], explanation: "I usa Do.", translation: "¿Siempre olvido mi mochila?" },
+      { prompt: "ALWAYS", answer: "SIEMPRE", options: ["SIEMPRE", "NUNCA", "RARA VEZ"], explanation: "Always significa siempre.", translation: "SIEMPRE" },
+      { prompt: "ANNUALLY", answer: "ANUALMENTE", options: ["ANUALMENTE", "DIARIAMENTE", "SEMANALMENTE"], explanation: "Annually significa anualmente.", translation: "ANUALMENTE" },
+      { prompt: "DAILY", answer: "DIARIAMENTE", options: ["DIARIAMENTE", "RARA VEZ", "NUNCA"], explanation: "Daily significa diariamente.", translation: "DIARIAMENTE" },
+      { prompt: "EVER", answer: "ALGUNA VEZ", options: ["ALGUNA VEZ", "SIEMPRE", "NUNCA"], explanation: "Ever significa alguna vez.", translation: "ALGUNA VEZ" },
+      { prompt: "FREQUENTLY", answer: "FRECUENTEMENTE", options: ["FRECUENTEMENTE", "OCASIONALMENTE", "NUNCA"], explanation: "Frequently significa frecuentemente.", translation: "FRECUENTEMENTE" },
+      { prompt: "FROM TIME TO TIME", answer: "DE VEZ EN CUANDO", options: ["DE VEZ EN CUANDO", "SIEMPRE", "ANUALMENTE"], explanation: "From time to time significa de vez en cuando.", translation: "DE VEZ EN CUANDO" },
+      { prompt: "HARDLY EVER", answer: "CASI NUNCA", options: ["CASI NUNCA", "SIEMPRE", "A MENUDO"], explanation: "Hardly ever significa casi nunca.", translation: "CASI NUNCA" },
+      { prompt: "NEVER", answer: "NUNCA", options: ["NUNCA", "USUALMENTE", "DIARIAMENTE"], explanation: "Never significa nunca.", translation: "NUNCA" },
+      { prompt: "NORMALLY", answer: "NORMALMENTE", options: ["NORMALMENTE", "RARA VEZ", "ANUALMENTE"], explanation: "Normally significa normalmente.", translation: "NORMALMENTE" },
+      { prompt: "OCCASIONALLY", answer: "OCASIONALMENTE", options: ["OCASIONALMENTE", "SEMANALMENTE", "SIEMPRE"], explanation: "Occasionally significa ocasionalmente.", translation: "OCASIONALMENTE" },
+      { prompt: "ONCE", answer: "UNA VEZ", options: ["UNA VEZ", "SEMANALMENTE", "DIARIAMENTE"], explanation: "Once significa una vez.", translation: "UNA VEZ" },
+      { prompt: "REGULARLY", answer: "REGULARMENTE", options: ["REGULARMENTE", "NUNCA", "RARA VEZ"], explanation: "Regularly significa regularmente.", translation: "REGULARMENTE" },
+      { prompt: "SELDOM", answer: "RARA VEZ", options: ["RARA VEZ", "SIEMPRE", "DIARIAMENTE"], explanation: "Seldom significa rara vez.", translation: "RARA VEZ" },
+      { prompt: "USUALLY", answer: "USUALMENTE", options: ["USUALMENTE", "NUNCA", "ANUALMENTE"], explanation: "Usually significa usualmente.", translation: "USUALMENTE" },
+      { prompt: "WEEKLY", answer: "SEMANALMENTE", options: ["SEMANALMENTE", "DIARIAMENTE", "ANUALMENTE"], explanation: "Weekly significa semanalmente.", translation: "SEMANALMENTE" },
     ],
     wh: [
       { prompt: "___ do you live?", answer: "Where", options: ["What", "Where", "When"], explanation: "Where pregunta por un lugar.", translation: "¿Dónde vives?" },
@@ -79,6 +79,8 @@
     bgMusic: document.getElementById("bgMusic"),
     musicControl: document.getElementById("musicControl"),
     gameModeLabel: document.getElementById("gameModeLabel"),
+    gameProgressBar: document.getElementById("gameProgressBar"),
+    gameProgressLabel: document.getElementById("gameProgressLabel"),
   };
 
   const gameState = { mode: null, queue: [], index: 0, answered: false };
@@ -211,6 +213,14 @@
     location.href = `pages/game_interface.html?${params.toString()}`;
   }
 
+  function routeToGameAction(action) {
+    const profile = getActiveProfile();
+    const params = new URLSearchParams();
+    if (profile) params.set("profile", profile.name);
+    params.set("action", action);
+    location.href = `pages/game_interface.html?${params.toString()}`;
+  }
+
   function renderHome() {
     const root = createElement("div", ["stack"]);
     const card = createElement("article", ["lesson"]);
@@ -220,12 +230,15 @@
       <p>Perfil: <strong>${profile ? profile.name : "NONE"}</strong></p>
       <div class="hero-actions hero-actions--arcade">
         <button class="btn btn-primary" data-play-entry="true">▶ PLAY</button>
-        <button class="btn btn-secondary" data-route="profile">👾 PROFILE</button>
-        <button class="btn btn-secondary" data-route="rankings">🏆 TOP</button>
-        <button class="btn btn-secondary" data-route="settings">⚙ SET</button>
+        <button class="btn btn-secondary" data-action="profile">👾 PROFILE</button>
+        <button class="btn btn-secondary" data-action="rankings">🏆 TOP</button>
+        <button class="btn btn-secondary" data-action="settings">⚙ SET</button>
       </div>
     `;
     card.querySelector("[data-play-entry]").addEventListener("click", routeToGame);
+    card.querySelectorAll("[data-action]").forEach((button) => {
+      button.addEventListener("click", () => routeToGameAction(button.getAttribute("data-action")));
+    });
     root.appendChild(card);
     return root;
   }
@@ -321,6 +334,12 @@
 
   function initHub() {
     document.querySelectorAll("[data-route]").forEach((button) => button.addEventListener("click", () => render(button.getAttribute("data-route"))));
+    document.querySelectorAll("[data-action]").forEach((button) => {
+      button.addEventListener("click", () => routeToGameAction(button.getAttribute("data-action")));
+    });
+    document.querySelectorAll("[data-play-entry]").forEach((button) => {
+      button.addEventListener("click", routeToGame);
+    });
     if (els.musicToggle) {
       els.musicToggle.addEventListener("click", () => {
         const enabled = els.musicToggle.dataset.enabled !== "true";
@@ -345,9 +364,23 @@
       return;
     }
 
-    const selectedMode = new URL(location.href).searchParams.get("mode");
+    const url = new URL(location.href);
+    const selectedMode = url.searchParams.get("mode");
+    const action = url.searchParams.get("action");
+    if (action === "profile") {
+      renderCreateProfile();
+      return;
+    }
+    if (action === "rankings") {
+      renderModeMenu("rankings");
+      return;
+    }
+    if (action === "settings") {
+      renderModeMenu("settings");
+      return;
+    }
     if (!selectedMode) {
-      renderModeSelect();
+      renderStartChoice();
       return;
     }
 
@@ -374,13 +407,21 @@
     function renderQuestion() {
       const question = gameState.queue[gameState.index];
       if (!question) {
-        questionShell.innerHTML = `<p class="prompt">Terminaste la partida.</p><button class="btn btn-primary" id="backModeBtn" type="button">Volver a modos</button>`;
+        questionShell.innerHTML = `<p class="prompt">Terminaste la partida.</p><button class="btn btn-primary" id="backModeBtn" type="button">Ir a rankings</button>`;
         questionShell.querySelector("#backModeBtn").addEventListener("click", () => {
-          const params = new URLSearchParams(location.search);
-          params.delete("mode");
-          location.search = params.toString();
+          const profile = getActiveProfile();
+          const params = new URLSearchParams();
+          if (profile) params.set("profile", profile.name);
+          location.href = `pages/game_interface.html?action=rankings&${params.toString()}`;
         });
         return;
+      }
+
+      if (els.gameProgressBar) {
+        els.gameProgressBar.style.width = `${((gameState.index + 1) / 15) * 100}%`;
+      }
+      if (els.gameProgressLabel) {
+        els.gameProgressLabel.textContent = `${gameState.index + 1} de 15`;
       }
 
       questionShell.innerHTML = `
@@ -479,6 +520,44 @@
   }
 
   function renderGameModeSelect() {
+    renderModeSelect();
+  }
+
+  function renderStartChoice() {
+    const profile = getActiveProfile();
+    const root = createElement("div", ["stack"]);
+    const card = createElement("article", ["lesson"]);
+    card.innerHTML = `
+      <h2>Iniciar partida</h2>
+      <p>Usuario actual: <strong>${profile ? profile.name : "Sin perfil"}</strong></p>
+      <div class="option-grid">
+        <button class="btn btn-primary" id="continueUserBtn" type="button">Continuar con el mismo usuario</button>
+        <button class="btn btn-secondary" id="changeUserBtn" type="button">Cambiar a uno nuevo</button>
+      </div>
+    `;
+    root.appendChild(card);
+    els.view.replaceChildren(root);
+
+    card.querySelector("#continueUserBtn").addEventListener("click", () => renderModeSelect());
+    card.querySelector("#changeUserBtn").addEventListener("click", () => renderCreateProfile());
+  }
+
+  function renderModeMenu(mode) {
+    if (!els.view) return;
+    if (mode === "rankings") {
+      const root = createElement("div", ["stack"]);
+      root.appendChild(renderRankings());
+      els.view.replaceChildren(root);
+      return;
+    }
+    if (mode === "settings") {
+      const root = createElement("div", ["stack"]);
+      root.appendChild(renderSettings());
+      els.view.replaceChildren(root);
+    }
+  }
+
+  function renderModeSelect() {
     const root = createElement("div", ["stack"]);
     const card = createElement("article", ["lesson"]);
     card.innerHTML = `<h2>Elige modo</h2><p>Cada partida tiene 15 preguntas.</p>`;
@@ -501,3 +580,4 @@
   if (GAME_PAGE) initGame();
   else initHub();
 })();
+
