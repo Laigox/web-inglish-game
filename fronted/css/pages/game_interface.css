@@ -1,0 +1,16 @@
+/* Page-specific overrides for the game screen. */
+.arcade-screen {
+  min-height: 420px;
+}
+
+.game-top {
+  align-items: flex-start;
+}
+
+.game-explain {
+  margin-top: 8px;
+}
+
+.translation-line {
+  margin-top: 8px;
+}
