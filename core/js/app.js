@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY = "present-simple-quest-state-v4";
-  const MAX_NAME_LENGTH = 7;
+  const MAX_NAME_LENGTH = 20;
   const ROUTES = { home: "home", rankings: "rankings", profile: "profile", settings: "settings" };
   const GAME_MODES = {
     simple: "SIMPLE INTERROGATIVA",
@@ -133,12 +133,12 @@
   function buildModeQueue(mode) {
     if (mode === "mix") {
       return shuffle([
-        ...shuffle(QUESTION_BANK.simple).slice(0, 5),
-        ...shuffle(QUESTION_BANK.frequency).slice(0, 5),
-        ...shuffle(QUESTION_BANK.wh).slice(0, 5),
+        ...shuffle(QUESTION_BANK.simple).slice(0, 4),
+        ...shuffle(QUESTION_BANK.frequency).slice(0, 3),
+        ...shuffle(QUESTION_BANK.wh).slice(0, 3),
       ]);
     }
-    return shuffle(QUESTION_BANK[mode] || QUESTION_BANK.simple).slice(0, 15);
+    return shuffle(QUESTION_BANK[mode] || QUESTION_BANK.simple).slice(0, 10);
   }
 
   function getModeLabel(mode) {
@@ -160,10 +160,10 @@
     if (els.scoreValue) els.scoreValue.textContent = String(profile.score || 0);
     if (els.comboValue) els.comboValue.textContent = `x${Math.max(1, profile.combo || 0)}`;
     if (els.medalValue) els.medalValue.textContent = String(profile.medals || 0);
-    const percent = Math.min(100, Math.round(((profile.questionHistory.length || 0) / 15) * 100));
+    const percent = Math.min(100, Math.round(((profile.questionHistory.length || 0) / 10) * 100));
     if (els.progressBar) els.progressBar.style.width = `${percent}%`;
     if (els.progressLabel) els.progressLabel.textContent = `${percent}%`;
-    if (els.unlockLabel) els.unlockLabel.textContent = "15 preguntas";
+    if (els.unlockLabel) els.unlockLabel.textContent = "10 preguntas";
     saveState();
   }
 
@@ -177,27 +177,55 @@
   }
 
   function setMusicEnabled(enabled) {
-    if (!els.bgMusic || !els.musicControl) return;
+    if (!els.bgMusic) return;
     if (enabled) {
       els.bgMusic.muted = false;
       els.bgMusic.volume = 0.6;
-      els.bgMusic.play().catch(() => {});
-      els.musicControl.textContent = "🔊";
-      els.musicControl.dataset.enabled = "true";
-      els.musicControl.setAttribute("aria-label", "Pausar música");
+      const playPromise = els.bgMusic.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+      if (els.musicControl) {
+        els.musicControl.textContent = "🔊";
+        els.musicControl.dataset.enabled = "true";
+        els.musicControl.setAttribute("aria-label", "Pausar música");
+      }
     } else {
       els.bgMusic.pause();
-      els.musicControl.textContent = "🔇";
-      els.musicControl.dataset.enabled = "false";
-      els.musicControl.setAttribute("aria-label", "Reanudar música");
+      if (els.musicControl) {
+        els.musicControl.textContent = "🔇";
+        els.musicControl.dataset.enabled = "false";
+        els.musicControl.setAttribute("aria-label", "Reanudar música");
+      }
+    }
+    // keep the header toggle in sync (if present)
+    if (els.musicToggle) {
+      els.musicToggle.dataset.enabled = enabled ? "true" : "false";
+      els.musicToggle.textContent = enabled ? "🎵" : "🔇";
+    }
+    // persist state immediately
+    try { saveMusicState(); } catch {}
+    // notify other pages
+    if (MUSIC_CHANNEL) {
+      try { MUSIC_CHANNEL.postMessage({ type: "music-toggle", payload: { enabled, currentTime: els.bgMusic.currentTime || 0 } }); } catch {}
     }
   }
 
   function ensureAutoplayFallback() {
     if (!els.bgMusic) return;
+    const startAudio = () => {
+      const playPromise = els.bgMusic.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    };
+    startAudio();
+    els.bgMusic.addEventListener("ended", startAudio);
+    els.bgMusic.addEventListener("loadeddata", startAudio);
+    els.bgMusic.addEventListener("canplay", startAudio);
     els.bgMusic.play().catch(() => {
       const resume = () => {
-        els.bgMusic.play().catch(() => {});
+        startAudio();
         window.removeEventListener("pointerdown", resume);
         window.removeEventListener("keydown", resume);
       };
@@ -206,19 +234,117 @@
     });
   }
 
+  // Persist audio playback across page loads (best-effort): save currentTime and paused state
+  const MUSIC_STATE_KEY = "psq_bgmusic_state";
+  const MUSIC_CHANNEL = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("psq-music") : null;
+  function saveMusicState() {
+    if (!els.bgMusic) return;
+    try {
+      const data = { currentTime: els.bgMusic.currentTime || 0, paused: els.bgMusic.paused };
+      sessionStorage.setItem(MUSIC_STATE_KEY, JSON.stringify(data));
+      // announce to other pages
+      if (MUSIC_CHANNEL) {
+        try { MUSIC_CHANNEL.postMessage({ type: "music-state", payload: data }); } catch {}
+      }
+    } catch {}
+  }
+
+  function restoreMusicState() {
+    if (!els.bgMusic) return;
+    try {
+      const raw = sessionStorage.getItem(MUSIC_STATE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (typeof data.currentTime === "number") {
+        try {
+          els.bgMusic.currentTime = Math.min(els.bgMusic.duration || Infinity, data.currentTime || 0);
+        } catch {}
+      }
+      if (!data.paused) {
+        const p = els.bgMusic.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } else {
+        els.bgMusic.pause();
+      }
+      // reflect on controls
+      const enabled = !(data && data.paused);
+      if (els.musicControl) {
+        els.musicControl.textContent = enabled ? "🔊" : "🔇";
+        els.musicControl.dataset.enabled = enabled ? "true" : "false";
+      }
+      if (els.musicToggle) {
+        els.musicToggle.textContent = enabled ? "🎵" : "🔇";
+        els.musicToggle.dataset.enabled = enabled ? "true" : "false";
+      }
+    } catch {}
+  }
+
+  // BroadcastChannel handlers: respond to requests and sync toggles across open pages
+  if (MUSIC_CHANNEL) {
+    MUSIC_CHANNEL.addEventListener("message", (ev) => {
+      const { data } = ev;
+      if (!data || typeof data.type !== "string") return;
+      try {
+        if (data.type === "music-request") {
+          // someone asks for current state -> reply with ours
+          if (els.bgMusic) {
+            const payload = { currentTime: els.bgMusic.currentTime || 0, paused: els.bgMusic.paused };
+            MUSIC_CHANNEL.postMessage({ type: "music-state", payload });
+          }
+        } else if (data.type === "music-state") {
+          // update our controls to match the announced state
+          const payload = data.payload || {};
+          if (typeof payload.currentTime === "number" && els.bgMusic) {
+            try { els.bgMusic.currentTime = Math.min(els.bgMusic.duration || Infinity, payload.currentTime || 0); } catch {}
+          }
+          const enabled = !(payload && payload.paused);
+          setMusicEnabled(enabled);
+        } else if (data.type === "music-toggle") {
+          const payload = data.payload || {};
+          setMusicEnabled(!!payload.enabled);
+          if (typeof payload.currentTime === "number" && els.bgMusic) {
+            try { els.bgMusic.currentTime = payload.currentTime; } catch {}
+          }
+        }
+      } catch {}
+    });
+    // ask others for current state on load
+    try { MUSIC_CHANNEL.postMessage({ type: "music-request" }); } catch {}
+  }
+  // Save periodically and on unload
+  setInterval(saveMusicState, 1000);
+  window.addEventListener("beforeunload", saveMusicState);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") saveMusicState();
+  });
+
   function routeToGame() {
     const profile = getActiveProfile();
     const params = new URLSearchParams();
     if (profile) params.set("profile", profile.name);
-    location.href = `pages/game_interface.html?${params.toString()}`;
+    // If there's an in-progress saved game for this profile, ask to resume
+    const inProgressKey = `inProgress_${profile ? profile.name : ""}`;
+    const inProgress = profile && sessionStorage.getItem(inProgressKey);
+    if (inProgress) {
+      const resume = window.confirm("Tienes una partida en curso. ¿Quieres reanudarla?\nAceptar: Reanudar. Cancelar: Iniciar nueva.");
+      if (resume) params.set("resume", "true");
+      else sessionStorage.removeItem(inProgressKey);
+    }
+    location.href = `/pages/game_interface.html?${params.toString()}`;
   }
 
   function routeToGameAction(action) {
     const profile = getActiveProfile();
     const params = new URLSearchParams();
     if (profile) params.set("profile", profile.name);
+    // Navigate to dedicated pages for profile, rankings and settings
+    if (["profile", "rankings", "settings"].includes(action)) {
+      params.set("route", action);
+      location.href = `/pages/${action}.html?${params.toString()}`;
+      return;
+    }
     params.set("action", action);
-    location.href = `pages/game_interface.html?${params.toString()}`;
+    location.href = `/pages/game_interface.html?${params.toString()}`;
   }
 
   function renderHome() {
@@ -345,16 +471,67 @@
         const enabled = els.musicToggle.dataset.enabled !== "true";
         els.musicToggle.dataset.enabled = enabled ? "true" : "false";
         els.musicToggle.textContent = enabled ? "🎵" : "🔇";
+        setMusicEnabled(enabled);
       });
     }
     if (els.musicControl) {
-      els.musicControl.addEventListener("click", () => setMusicEnabled(!(els.bgMusic && !els.bgMusic.paused)));
-      setMusicEnabled(true);
+      els.musicControl.addEventListener("click", () => {
+        const enabled = els.musicControl.dataset.enabled !== "true";
+        setMusicEnabled(enabled);
+      });
+      // restore previous state, then fallback to autoplay if nothing saved
+      restoreMusicState();
       ensureAutoplayFallback();
     }
     ensureActiveProfile();
     syncHud();
-    render(state.route || ROUTES.home);
+    // If URL forces a route (used by dedicated pages), render it
+    const urlParams = new URL(location.href).searchParams;
+    let forced = urlParams.get("route");
+    if (!forced) {
+      const path = location.pathname || "";
+      if (/profile\.html$/i.test(path)) forced = ROUTES.profile;
+      else if (/rankings\.html$/i.test(path)) forced = ROUTES.rankings;
+      else if (/settings\.html$/i.test(path)) forced = ROUTES.settings;
+    }
+    render(forced || state.route || ROUTES.home);
+    // global back home button (used on dedicated pages)
+    const backBtn = document.getElementById("backHomeBtn");
+    if (backBtn) {
+      const target = location.pathname.includes("/pages/") ? "../index.html" : "index.html";
+      backBtn.addEventListener("click", () => (location.href = target));
+    }
+    // ensure a single floating global music button
+    ensureGlobalMusicButton();
+  }
+
+  function ensureGlobalMusicButton() {
+    if (document.getElementById("globalMusicButton")) return;
+    const btn = document.createElement("button");
+    btn.id = "globalMusicButton";
+    btn.className = "music-control";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Silenciar o activar música");
+    // adopt current state
+    const enabled = els.bgMusic && !(els.bgMusic.paused);
+    btn.textContent = enabled ? "🔊" : "🔇";
+    btn.dataset.enabled = enabled ? "true" : "false";
+    btn.style.position = "fixed";
+    btn.style.right = "16px";
+    btn.style.bottom = "16px";
+    btn.style.zIndex = "9999";
+    btn.addEventListener("click", () => {
+      const nowEnabled = btn.dataset.enabled !== "true";
+      setMusicEnabled(nowEnabled);
+      btn.textContent = nowEnabled ? "🔊" : "🔇";
+      btn.dataset.enabled = nowEnabled ? "true" : "false";
+    });
+    document.body.appendChild(btn);
+    // hide legacy controls if present
+    const old = document.getElementById("musicControl");
+    if (old && old !== btn) old.style.display = "none";
+    const toggle = document.getElementById("musicToggle");
+    if (toggle) toggle.style.display = "none";
   }
 
   function initGame() {
@@ -367,6 +544,21 @@
     const url = new URL(location.href);
     const selectedMode = url.searchParams.get("mode");
     const action = url.searchParams.get("action");
+    const resume = url.searchParams.get("resume") === "true";
+    if (resume) {
+      const key = `inProgress_${profile.name}`;
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data && data.mode) {
+            gameState.mode = data.mode;
+            gameState.queue = data.queue || buildModeQueue(data.mode);
+            gameState.index = typeof data.index === "number" ? (data.index + 1) : 0;
+          }
+        }
+      } catch {}
+    }
     if (action === "profile") {
       renderCreateProfile();
       return;
@@ -379,7 +571,7 @@
       renderModeMenu("settings");
       return;
     }
-    if (!selectedMode) {
+    if (!selectedMode && !resume) {
       renderStartChoice();
       return;
     }
@@ -403,6 +595,23 @@
 
     card.querySelector("#backHomeBtn").addEventListener("click", () => (location.href = "../index.html"));
     const questionShell = card.querySelector("#questionShell");
+      // ensure single global music button on game page as well
+      ensureGlobalMusicButton();
+
+    function awardAnswer(isCorrect) {
+      const profile = getActiveProfile();
+      if (!profile) return;
+      const nextCombo = isCorrect ? (profile.combo || 0) + 1 : 0;
+      const comboMultiplier = isCorrect ? Math.min(3, Math.max(1, nextCombo)) : 1;
+      const delta = isCorrect ? 10 * comboMultiplier : -5;
+      profile.score = Math.max(0, (profile.score || 0) + delta);
+      profile.combo = isCorrect ? nextCombo : 0;
+      profile.bestCombo = Math.max(profile.bestCombo || 0, nextCombo);
+      profile.medals = (profile.medals || 0) + (isCorrect && nextCombo > 0 && nextCombo % 5 === 0 ? 1 : 0);
+      profile.questionHistory = profile.questionHistory || [];
+      profile.questionHistory.push({ correct: !!isCorrect, delta, timestamp: Date.now() });
+      saveState();
+    }
 
     function renderQuestion() {
       const question = gameState.queue[gameState.index];
@@ -412,16 +621,20 @@
           const profile = getActiveProfile();
           const params = new URLSearchParams();
           if (profile) params.set("profile", profile.name);
-          location.href = `pages/game_interface.html?action=rankings&${params.toString()}`;
+          const query = params.toString();
+          location.href = query ? `./rankings.html?${query}` : `./rankings.html`;
         });
+        // Clear in-progress marker when finished
+        const profile = getActiveProfile();
+        if (profile) sessionStorage.removeItem(`inProgress_${profile.name}`);
         return;
       }
 
       if (els.gameProgressBar) {
-        els.gameProgressBar.style.width = `${((gameState.index + 1) / 15) * 100}%`;
+        els.gameProgressBar.style.width = `${((gameState.index + 1) / 10) * 100}%`;
       }
       if (els.gameProgressLabel) {
-        els.gameProgressLabel.textContent = `${gameState.index + 1} de 15`;
+        els.gameProgressLabel.textContent = `${gameState.index + 1} de 10`;
       }
 
       questionShell.innerHTML = `
@@ -464,6 +677,15 @@
           explain.hidden = false;
           followingBtn.hidden = false;
           awardAnswer(isCorrect);
+          // persist in-progress state for resume
+          const profile = getActiveProfile();
+          if (profile) {
+            const key = `inProgress_${profile.name}`;
+            const data = { mode: gameState.mode, index: gameState.index, queue: gameState.queue };
+            try {
+              sessionStorage.setItem(key, JSON.stringify(data));
+            } catch {}
+          }
           syncHud();
         });
         optionGrid.appendChild(button);
@@ -480,10 +702,10 @@
 
     if (els.musicControl) {
       els.musicControl.addEventListener("click", () => {
-        if (els.bgMusic && !els.bgMusic.paused) setMusicEnabled(false);
-        else setMusicEnabled(true);
+        const enabled = els.musicControl.dataset.enabled !== "true";
+        setMusicEnabled(enabled);
       });
-      setMusicEnabled(true);
+      restoreMusicState();
       ensureAutoplayFallback();
     }
   }
@@ -534,12 +756,32 @@
         <button class="btn btn-primary" id="continueUserBtn" type="button">Continuar con el mismo usuario</button>
         <button class="btn btn-secondary" id="changeUserBtn" type="button">Cambiar a uno nuevo</button>
       </div>
+      <div class="profile-list" id="savedUsersList"></div>
     `;
     root.appendChild(card);
     els.view.replaceChildren(root);
 
     card.querySelector("#continueUserBtn").addEventListener("click", () => renderModeSelect());
     card.querySelector("#changeUserBtn").addEventListener("click", () => renderCreateProfile());
+
+    const savedUsersList = card.querySelector("#savedUsersList");
+    const profiles = state.profiles || [];
+    if (profiles.length) {
+      savedUsersList.innerHTML = "<h3>Usuarios guardados</h3>";
+      profiles.forEach((savedProfile) => {
+        const userButton = createElement("button", ["profile-row"]);
+        userButton.type = "button";
+        userButton.innerHTML = `<strong>${savedProfile.name}</strong><span>${savedProfile.score} pts</span>`;
+        userButton.addEventListener("click", () => {
+          state.activeProfile = savedProfile.name;
+          syncHud();
+          renderModeSelect();
+        });
+        savedUsersList.appendChild(userButton);
+      });
+    } else {
+      savedUsersList.innerHTML = "<p>No hay usuarios guardados todavía.</p>";
+    }
   }
 
   function renderModeMenu(mode) {
@@ -560,7 +802,7 @@
   function renderModeSelect() {
     const root = createElement("div", ["stack"]);
     const card = createElement("article", ["lesson"]);
-    card.innerHTML = `<h2>Elige modo</h2><p>Cada partida tiene 15 preguntas.</p>`;
+    card.innerHTML = `<h2>Elige modo</h2><p>Cada partida tiene 10 preguntas.</p>`;
     const grid = createElement("div", ["option-grid"]);
     Object.entries(GAME_MODES).forEach(([key, label]) => {
       const button = createElement("button", ["btn", "btn-option"], label);
