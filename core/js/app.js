@@ -498,9 +498,7 @@
     // global back home button (used on dedicated pages)
     const backBtn = document.getElementById("backHomeBtn");
     if (backBtn) {
-      const baseEl = document.querySelector("base");
-    const baseHref = baseEl ? (baseEl.getAttribute("href") || "") : "";
-    const target = baseHref ? baseHref : (location.pathname.includes("/pages/") ? "../index.html" : "index.html");
+      const target = location.pathname.includes("/pages/") ? "../index.html" : "index.html";
       backBtn.addEventListener("click", () => (location.href = target));
     }
     // ensure a single floating global music button
@@ -509,20 +507,10 @@
 
   function resolvePageUrl(pageName, params) {
     const urlParams = params instanceof URLSearchParams ? params : new URLSearchParams(params || {});
-    // if a <base> tag exists, use it as root
-    const baseEl = document.querySelector("base");
-    const baseHref = baseEl ? (baseEl.getAttribute("href") || "") : "";
     const inPages = location.pathname.includes("/pages/");
-    let prefix;
-    if (baseHref) {
-      prefix = baseHref.endsWith("/") ? baseHref + "pages" : baseHref + "/pages";
-    } else {
-      prefix = inPages ? "../pages" : "pages";
-    }
+    const prefix = inPages ? "../pages" : "pages";
     const qs = urlParams.toString();
-    // ensure no double slashes
-    const sep = prefix.endsWith("/") ? "" : "/";
-    return `${prefix}${sep}${pageName}.html${qs ? "?" + qs : ""}`;
+    return `${prefix}/${pageName}.html${qs ? "?" + qs : ""}`;
   }
 
   function ensureGlobalMusicButton() {
