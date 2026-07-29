@@ -380,7 +380,17 @@
     const labels = ["2", "1", "3"];
     places.forEach((profile, index) => {
       const slot = createElement("div", [classes[index]]);
-      slot.innerHTML = `<span class="podium-rank">${labels[index]}</span><strong>${profile ? profile.name : "---"}</strong><small>${profile ? profile.score : 0} pts</small>`;
+      if (index === 1) {
+        slot.innerHTML = `
+          <span class="podium-rank">${labels[index]}</span>
+          <div class="podium-gold-media">
+            <img src="../media/images/el-gordo-luy.png" alt="Top 1" />
+          </div>
+          <small>${profile ? profile.score : 0} pts</small>
+        `;
+      } else {
+        slot.innerHTML = `<span class="podium-rank">${labels[index]}</span><strong>${profile ? profile.name : "---"}</strong><small>${profile ? profile.score : 0} pts</small>`;
+      }
       podium.appendChild(slot);
     });
     card.appendChild(podium);
