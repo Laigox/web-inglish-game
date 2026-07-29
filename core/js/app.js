@@ -382,7 +382,10 @@
       const slot = createElement("div", [classes[index]]);
       if (index === 1) {
         slot.innerHTML = `
-          <span class="podium-rank">${labels[index]}</span>
+          <div class="podium-top1-header">
+            <span class="podium-rank">${labels[index]}</span>
+            <strong class="podium-winner">${profile ? profile.name : "---"}</strong>
+          </div>
           <div class="podium-gold-media">
             <img src="../media/images/el-gordo-luy.png" alt="Top 1" />
           </div>
