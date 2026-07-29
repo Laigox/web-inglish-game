@@ -498,7 +498,9 @@
     // global back home button (used on dedicated pages)
     const backBtn = document.getElementById("backHomeBtn");
     if (backBtn) {
-      const target = location.pathname.includes("/pages/") ? "../index.html" : "index.html";
+      const baseEl = document.querySelector("base");
+    const baseHref = baseEl ? (baseEl.getAttribute("href") || "") : "";
+    const target = baseHref ? baseHref : (location.pathname.includes("/pages/") ? "../index.html" : "index.html");
       backBtn.addEventListener("click", () => (location.href = target));
     }
     // ensure a single floating global music button
@@ -509,9 +511,14 @@
     const urlParams = params instanceof URLSearchParams ? params : new URLSearchParams(params || {});
     // if a <base> tag exists, use it as root
     const baseEl = document.querySelector("base");
-    const baseHref = baseEl ? baseEl.getAttribute("href") || "" : "";
+    const baseHref = baseEl ? (baseEl.getAttribute("href") || "") : "";
     const inPages = location.pathname.includes("/pages/");
-    const prefix = baseHref || (inPages ? "../pages" : "pages");
+    let prefix;
+    if (baseHref) {
+      prefix = baseHref.endsWith("/") ? baseHref + "pages" : baseHref + "/pages";
+    } else {
+      prefix = inPages ? "../pages" : "pages";
+    }
     const qs = urlParams.toString();
     // ensure no double slashes
     const sep = prefix.endsWith("/") ? "" : "/";
@@ -606,7 +613,11 @@
     els.view.replaceChildren(root);
     syncHud();
 
-    card.querySelector("#backHomeBtn").addEventListener("click", () => (location.href = "../index.html"));
+    card.querySelector("#backHomeBtn").addEventListener("click", () => {
+      const baseEl = document.querySelector("base");
+      const baseHref = baseEl ? (baseEl.getAttribute("href") || "") : "";
+      location.href = baseHref ? baseHref : "../index.html";
+    });
     const questionShell = card.querySelector("#questionShell");
       // ensure single global music button on game page as well
       ensureGlobalMusicButton();
