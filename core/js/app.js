@@ -330,7 +330,7 @@
       if (resume) params.set("resume", "true");
       else sessionStorage.removeItem(inProgressKey);
     }
-    location.href = `/pages/game_interface.html?${params.toString()}`;
+    location.href = resolvePageUrl("game_interface", params);
   }
 
   function routeToGameAction(action) {
@@ -340,11 +340,11 @@
     // Navigate to dedicated pages for profile, rankings and settings
     if (["profile", "rankings", "settings"].includes(action)) {
       params.set("route", action);
-      location.href = `/pages/${action}.html?${params.toString()}`;
+      location.href = resolvePageUrl(action, params);
       return;
     }
     params.set("action", action);
-    location.href = `/pages/game_interface.html?${params.toString()}`;
+    location.href = resolvePageUrl("game_interface", params);
   }
 
   function renderHome() {
@@ -505,6 +505,19 @@
     ensureGlobalMusicButton();
   }
 
+  function resolvePageUrl(pageName, params) {
+    const urlParams = params instanceof URLSearchParams ? params : new URLSearchParams(params || {});
+    // if a <base> tag exists, use it as root
+    const baseEl = document.querySelector("base");
+    const baseHref = baseEl ? baseEl.getAttribute("href") || "" : "";
+    const inPages = location.pathname.includes("/pages/");
+    const prefix = baseHref || (inPages ? "../pages" : "pages");
+    const qs = urlParams.toString();
+    // ensure no double slashes
+    const sep = prefix.endsWith("/") ? "" : "/";
+    return `${prefix}${sep}${pageName}.html${qs ? "?" + qs : ""}`;
+  }
+
   function ensureGlobalMusicButton() {
     if (document.getElementById("globalMusicButton")) return;
     const btn = document.createElement("button");
@@ -621,8 +634,7 @@
           const profile = getActiveProfile();
           const params = new URLSearchParams();
           if (profile) params.set("profile", profile.name);
-          const query = params.toString();
-          location.href = query ? `./rankings.html?${query}` : `./rankings.html`;
+          location.href = resolvePageUrl("rankings", params);
         });
         // Clear in-progress marker when finished
         const profile = getActiveProfile();
